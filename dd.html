@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CryptoLock Messenger 💖</title>
+  <script src="https://cdn.jsdelivr.net/npm/node-forge@1.3.1/dist/forge.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #ffe4ec, #fff0f5);
+      color: #333;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #d63384;
+      font-size: 2.5rem;
+      margin-bottom: 40px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background-color: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      border: 2px solid #f9c4d7;
+      display: flex;
+      flex-direction: column;
+    }
+
+    h2 {
+      color: #c2256c;
+      margin-bottom: 10px;
+      font-size: 1.2rem;
+    }
+
+    textarea,
+    input {
+      border: 1px solid #d63384;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 1em;
+      margin-bottom: 12px;
+      background: #fff0f5;
+      resize: vertical;
+      color: #333;
+    }
+
+    textarea {
+      min-height: 100px;
+      width: 100%;
+    }
+
+    button {
+      padding: 12px;
+      background-color: #d63384;
+      color: white;
+      font-size: 1em;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin-top: auto;
+    }
+
+    button:hover {
+      background-color: #c2256c;
+    }
+
+    pre {
+      background: #ffe0eb;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 0.9em;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      border: 1px solid #f5c2d7;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>CryptoLock Messenger 💖</h1>
+
+    <div class="grid">
+      <!-- Encrypt Card -->
+      <div class="card">
+        <h2>🔐 Encrypt Message</h2>
+        <textarea id="inputMessage" placeholder="Type your secret message..."></textarea>
+        <button onclick="encryptMessage()">Encrypt</button>
+      </div>
+
+      <!-- Decrypt Card -->
+      <div class="card">
+        <h2>🔓 Decrypt Message</h2>
+        <textarea id="userEncrypted" placeholder="Paste encrypted message..."></textarea>
+        <input id="userKey" placeholder="Paste AES key here..." />
+        <button onclick="decryptMessage()">Decrypt</button>
+      </div>
+
+      <!-- Output Card -->
+      <div class="card">
+        <h2>📦 Output</h2>
+        <strong>Encrypted Message:</strong>
+        <pre id="encryptedMessage">...</pre>
+        <strong>AES Key:</strong>
+        <pre id="aesKey">...</pre>
+        <strong>Decrypted Message:</strong>
+        <pre id="decryptedMessage">...</pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function encryptMessage() {
+      const input = document.getElementById('inputMessage').value.trim();
+      if (!input) return alert("Please enter a message.");
+
+      const aesKey = forge.random.getBytesSync(16);
+      const iv = forge.random.getBytesSync(16);
+
+      const cipher = forge.cipher.createCipher('AES-CBC', aesKey);
+      cipher.start({ iv });
+      cipher.update(forge.util.createBuffer(input, 'utf8'));
+      cipher.finish();
+
+      const encrypted = cipher.output.getBytes();
+      const encryptedFull = iv + encrypted;
+
+      const encodedKey = forge.util.encode64(aesKey);
+      const encodedEncrypted = forge.util.encode64(encryptedFull);
+
+      document.getElementById('encryptedMessage').innerText = encodedEncrypted;
+      document.getElementById('aesKey').innerText = encodedKey;
+
+      // Also populate the decryption fields for convenience
+      document.getElementById('userEncrypted').value = encodedEncrypted;
+      document.getElementById('userKey').value = encodedKey;
+    }
+
+    function decryptMessage() {
+      const encodedKey = document.getElementById('userKey').value.trim();
+      const encodedEncrypted = document.getElementById('userEncrypted').value.trim();
+
+      if (!encodedKey || !encodedEncrypted) {
+        return alert("Please provide both encrypted message and AES key.");
+      }
+
+      try {
+        const aesKey = forge.util.decode64(encodedKey);
+        const encryptedData = forge.util.decode64(encodedEncrypted);
+        const iv = encryptedData.slice(0, 16);
+        const encrypted = encryptedData.slice(16);
+
+        const decipher = forge.cipher.createDecipher('AES-CBC', aesKey);
+        decipher.start({ iv });
+        decipher.update(forge.util.createBuffer(encrypted));
+        const success = decipher.finish();
+
+        if (!success) return alert("Decryption failed.");
+
+        const decrypted = decipher.output.toString('utf8');
+        document.getElementById('decryptedMessage').innerText = decrypted;
+      } catch (err) {
+        alert("Error during decryption. Please check your inputs.");
+      }
+    }
+  </script>
+</body>
+</html>
